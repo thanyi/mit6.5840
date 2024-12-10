@@ -18,10 +18,10 @@ import "strconv"
 // of key/value pairs.
 func Map(filename string, contents string) []mr.KeyValue {
 	// function to detect word separators.
-	ff := func(r rune) bool { return !unicode.IsLetter(r) }
+	ff := func(r rune) bool { return !unicode.IsLetter(r) } // 判断是否是字符，不是就返回true
 
 	// split contents into an array of words.
-	words := strings.FieldsFunc(contents, ff)
+	words := strings.FieldsFunc(contents, ff) // 当ff返回true，说明这个字符可以作为分隔符
 
 	kva := []mr.KeyValue{}
 	for _, w := range words {

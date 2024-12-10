@@ -28,7 +28,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	mapf, reducef := loadPlugin(os.Args[1])
+	mapf, reducef := loadPlugin(os.Args[1]) // 导入俩函数
 
 	//
 	// read each input file,
@@ -41,12 +41,12 @@ func main() {
 		if err != nil {
 			log.Fatalf("cannot open %v", filename)
 		}
-		content, err := ioutil.ReadAll(file)
+		content, err := ioutil.ReadAll(file) // 将文件内容传入content
 		if err != nil {
 			log.Fatalf("cannot read %v", filename)
 		}
 		file.Close()
-		kva := mapf(filename, string(content))
+		kva := mapf(filename, string(content)) // kva是[]mr.KeyValue{}，包含很多KeyValue{}结构
 		intermediate = append(intermediate, kva...)
 	}
 
@@ -56,7 +56,7 @@ func main() {
 	// rather than being partitioned into NxM buckets.
 	//
 
-	sort.Sort(ByKey(intermediate))
+	sort.Sort(ByKey(intermediate)) // 根据key进行Sort
 
 	oname := "mr-out-0"
 	ofile, _ := os.Create(oname)
@@ -73,7 +73,7 @@ func main() {
 		}
 		values := []string{}
 		for k := i; k < j; k++ {
-			values = append(values, intermediate[k].Value)
+			values = append(values, intermediate[k].Value) // 将value全部放在一个values切片中
 		}
 		output := reducef(intermediate[i].Key, values)
 
@@ -93,11 +93,11 @@ func loadPlugin(filename string) (func(string, string) []mr.KeyValue, func(strin
 	if err != nil {
 		log.Fatalf("cannot load plugin %v", filename)
 	}
-	xmapf, err := p.Lookup("Map")
+	xmapf, err := p.Lookup("Map") // 加载wc.so中的map函数
 	if err != nil {
 		log.Fatalf("cannot find Map in %v", filename)
 	}
-	mapf := xmapf.(func(string, string) []mr.KeyValue)
+	mapf := xmapf.(func(string, string) []mr.KeyValue) // 将interface类型转为func(string, string) []mr.KeyValue类型
 	xreducef, err := p.Lookup("Reduce")
 	if err != nil {
 		log.Fatalf("cannot find Reduce in %v", filename)

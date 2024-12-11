@@ -1,6 +1,10 @@
 package mr
 
-import "log"
+import (
+
+"log"
+"sync"
+)
 import "net"
 import "os"
 import "net/rpc"
@@ -9,10 +13,36 @@ import "net/http"
 
 type Coordinator struct {
 	// Your definitions here.
-
+	FileAllocatedMap map[string]bool   // 表示是否此文件语句被分配
+	nReduce int				// 表明reduce worker的数目
+	mutx    sync.Mutex
 }
 
 // Your code here -- RPC handlers for the worker to call.
+// 进行任务分配，当Worker进行请求的时候，返回没有进行任务的File
+func (c *Coordinator) AssignMap(args *RpcArgs, reply *RpcReply) error {
+	// 查看是Map请求还是Reduce请求
+	// 当请求表明想要进行Task的获取， 就找一个可以进行任务的file进行返回
+	if args.RequestType == "map" {
+		c.mutx.Lock()				// 加锁进行对filemap的修改
+		defer c.mutx.Unlock()
+		for filename, isused := range c.FileAllocatedMap{
+			if !isused {
+				reply.FileName = filename
+				reply.nReduce = c.nReduce
+
+				c.FileAllocatedMap[filename] = true
+				break
+			}
+		}
+	} else if args.RequestType == "reduce" {
+	//	TODO
+	}
+	return nil
+}
+
+
+
 
 //
 // an example RPC handler.
@@ -48,7 +78,7 @@ func (c *Coordinator) server() {
 func (c *Coordinator) Done() bool {
 	ret := false
 
-	// Your code here.
+	// Your code here. TODO
 
 
 	return ret
@@ -63,8 +93,11 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c := Coordinator{}
 
 	// Your code here.
-
-
+	c.nReduce = nReduce
+	// 初始化操作，每一个filename对应一个是否被分配任务的标志位
+	for _, file := range files {
+		c.FileAllocatedMap[file] = false
+	}
 	c.server()
 	return &c
 }

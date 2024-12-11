@@ -1,10 +1,23 @@
 package mr
 
-import "fmt"
+import (
+"encoding/json"
+"fmt"
+"io/ioutil"
+"os""sort"
+
+)
 import "log"
 import "net/rpc"
 import "hash/fnv"
 
+// for sorting by key.
+type ByKey []KeyValue
+
+// for sorting by key.
+func (a ByKey) Len() int           { return len(a) }
+func (a ByKey) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByKey) Less(i, j int) bool { return a[i].Key < a[j].Key }
 
 //
 // Map functions return a slice of KeyValue.
@@ -32,10 +45,72 @@ func Worker(mapf func(string, string) []KeyValue,
 	reducef func(string, []string) string) {
 
 	// Your worker implementation here.
+	intermediate := []KeyValue{}	// 中间输出
+	args := new(RpcArgs)
+	reply := new(RpcReply)
+
+	filename, content := workformap(args, reply, mapf)
+
+	// 在这里调用map函数
+	// kva是[]mr.KeyValue{}，包含很多KeyValue{}结构
+	kva := mapf(filename, content)
+	// 将kva的每一项放入intermediate中
+	intermediate = append(intermediate, kva...)
+	sort.Sort(ByKey(intermediate)) // 根据key进行Sort
+	// TODO: 使用hashkey对reduce进行分配
+	i := 0
+	for i < len(intermediate) {
+		j := i + 1
+		for j < len(intermediate) && intermediate[j].Key == intermediate[i].Key {
+			j++
+		}
+
+		i = j
+	}
+
+
+
+
+
+
+	// 创建中间文件进行存储
+	// TODO： Worker的序号怎么获取
+	enc := json.NewEncoder(file)	// file名是mr-X-Y结构
+	  for _, kv := range intermediate {
+		err := enc.Encode(&kv)
+		if err != nil {
+			log.Fatalf("cannot write intermediate files!")
+		}
+	  }
+
 
 	// uncomment to send the Example RPC to the coordinator.
-	// CallExample()
+	//CallExample()
+}
 
+// 向coordinator提交请求，coordinator返回filename
+// return：filename以及content
+func workformap(args *RpcArgs, reply *RpcReply,
+				mapf func(string, string) []KeyValue) (string, string) {
+	ok := call("Coordinator.AssignMap", &args, &reply)
+	var filename string
+	if ok {
+		filename = reply.FileName		// 拿到了当前任务的file
+	}else {
+		fmt.Printf("call failed!\n")
+	}
+
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatalf("cannot open %v", filename)
+	}
+	content, err := ioutil.ReadAll(file) // 将文件内容传入content
+	if err != nil {
+		log.Fatalf("cannot read %v", filename)
+	}
+	file.Close()
+
+	return filename ,string(content)
 }
 
 //

@@ -24,13 +24,14 @@ type ExampleReply struct {
 // Add your RPC definitions here.
 
 type RpcArgs struct {
-	RequestType string	// "map" or "reduce"
-
+	WorkerIdx int  	// worker的编号
 }
 
 type RpcReply struct {
+	TaskType string
 	FileName string
-	nReduce int			// reduce worker的数量
+	Idx	int			// Map函数或者reduce函数的序号
+	NReduce int			// reduce worker的数量
 }
 
 // Cook up a unique-ish UNIX-domain socket name

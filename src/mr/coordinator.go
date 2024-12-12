@@ -2,7 +2,9 @@ package mr
 
 import (
 
+"fmt"
 "log"
+"strconv"
 "sync"
 )
 import "net"
@@ -20,24 +22,27 @@ type Coordinator struct {
 
 // Your code here -- RPC handlers for the worker to call.
 // 进行任务分配，当Worker进行请求的时候，返回没有进行任务的File
-func (c *Coordinator) AssignMap(args *RpcArgs, reply *RpcReply) error {
+func (c *Coordinator) AssignTask(args *RpcArgs, reply *RpcReply) error {
+
 	// 查看是Map请求还是Reduce请求
 	// 当请求表明想要进行Task的获取， 就找一个可以进行任务的file进行返回
-	if args.RequestType == "map" {
-		c.mutx.Lock()				// 加锁进行对filemap的修改
-		defer c.mutx.Unlock()
-		for filename, isused := range c.FileAllocatedMap{
-			if !isused {
-				reply.FileName = filename
-				reply.nReduce = c.nReduce
-
-				c.FileAllocatedMap[filename] = true
-				break
-			}
+	fmt.Println("start assign to worker "+ strconv.Itoa(args.WorkerIdx))
+	c.mutx.Lock()				// 加锁进行对filemap的修改
+	defer c.mutx.Unlock()
+	i := 0 		// 给map的序号
+	for filename, isused := range c.FileAllocatedMap{
+		if !isused {
+			fmt.Println("AssignTask:", filename)
+			reply.TaskType = "map"
+			reply.FileName = filename
+			reply.NReduce = c.nReduce
+			reply.Idx = i
+			c.FileAllocatedMap[filename] = true
+			break
 		}
-	} else if args.RequestType == "reduce" {
-	//	TODO
+		i++		// map序号+1
 	}
+
 	return nil
 }
 
@@ -93,11 +98,15 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	c := Coordinator{}
 
 	// Your code here.
+	fmt.Println("Make coordinator...")
 	c.nReduce = nReduce
+	c.FileAllocatedMap = make(map[string]bool)
 	// 初始化操作，每一个filename对应一个是否被分配任务的标志位
 	for _, file := range files {
 		c.FileAllocatedMap[file] = false
 	}
+	fmt.Println("Allocated FileAllocatedMap")
+	fmt.Println("start server..")
 	c.server()
 	return &c
 }

@@ -8,6 +8,7 @@ package mr
 
 import "os"
 import "strconv"
+
 //
 // example to show how to declare the arguments
 // and reply for an RPC.
@@ -23,15 +24,59 @@ type ExampleReply struct {
 
 // Add your RPC definitions here.
 
-type RpcArgs struct {
-	WorkerIdx int  	// worker的编号
+type TaskType int
+type WorkState int // worker的工作状态
+type GlobalState int
+
+const (
+	MapWork GlobalState = iota
+	MapDone
+	ReduceWork
+	ReduceDone
+	AllDone
+)
+
+const (
+	MapTask TaskType = iota
+	ReduceTask
+	WaitTask
+	DoneTask
+)
+
+const (
+	Free WorkState = iota
+	Working
+)
+
+type MapRpcArgs struct{}
+
+type MapRpcReply struct {
+	FileName  string
+	WorkerIdx int // Map函数或者reduce函数的序号
+	NReduce   int // reduce worker的数量
 }
 
-type RpcReply struct {
-	TaskType string
-	FileName string
-	Idx	int			// Map函数或者reduce函数的序号
-	NReduce int			// reduce worker的数量
+type ReduceRpcArgs struct{}
+
+type ReduceRpcReply struct {
+	FileName  string
+	WorkerIdx int // Map函数或者reduce函数的序号
+	NReduce   int // reduce worker的数量
+	NMap      int
+}
+
+type GetTaskArgs struct{}
+
+type GetTaskReply struct {
+	TaskType TaskType
+}
+
+type EndTaskArgs struct {
+	WorkIdx int // Map函数或者reduce函数的序号
+}
+
+type EndTaskReply struct {
+	TaskType TaskType
 }
 
 // Cook up a unique-ish UNIX-domain socket name

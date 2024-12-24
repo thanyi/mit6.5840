@@ -6,7 +6,9 @@ package mr
 // remember to capitalize all names.
 //
 
-import "os"
+import (
+	"os"
+)
 import "strconv"
 
 //
@@ -25,16 +27,8 @@ type ExampleReply struct {
 // Add your RPC definitions here.
 
 type TaskType int
-type WorkState int // worker的工作状态
+type WorkStatus int // worker的工作状态
 type GlobalState int
-
-const (
-	MapWork GlobalState = iota
-	MapDone
-	ReduceWork
-	ReduceDone
-	AllDone
-)
 
 const (
 	MapTask TaskType = iota
@@ -44,39 +38,23 @@ const (
 )
 
 const (
-	Free WorkState = iota
-	Working
+	MapCompleted WorkStatus = iota
+	MapFailed
+	ReduceCompleted
+	ReduceFailed
 )
 
-type MapRpcArgs struct{}
-
-type MapRpcReply struct {
-	FileName  string
-	WorkerIdx int // Map函数或者reduce函数的序号
-	NReduce   int // reduce worker的数量
+type MsgSend struct {
+	TaskId    int        // 表明这个worker的编号
+	WorkState WorkStatus // 表明worker的状态
 }
 
-type ReduceRpcArgs struct{}
-
-type ReduceRpcReply struct {
-	FileName  string
-	WorkerIdx int // Map函数或者reduce函数的序号
-	NReduce   int // reduce worker的数量
-	NMap      int
-}
-
-type GetTaskArgs struct{}
-
-type GetTaskReply struct {
-	TaskType TaskType
-}
-
-type EndTaskArgs struct {
-	WorkIdx int // Map函数或者reduce函数的序号
-}
-
-type EndTaskReply struct {
-	TaskType TaskType
+type MsgReply struct {
+	TaskId   int
+	TaskType TaskType // 分配的任务类型
+	FileName string
+	NReduce  int
+	NMap     int
 }
 
 // Cook up a unique-ish UNIX-domain socket name
@@ -88,3 +66,27 @@ func coordinatorSock() string {
 	s += strconv.Itoa(os.Getuid())
 	return s
 }
+
+//type GetTaskArgs struct{}
+//
+//type GetTaskReply struct {
+//	TaskType TaskType
+//}
+//
+//type EndTaskArgs struct {
+//	WorkIdx int // Map函数或者reduce函数的序号
+//}
+//
+//type EndTaskReply struct {
+//	TaskType TaskType
+//}
+//
+//type MsgArgs struct{}
+//
+//type MsgReply struct {
+//	FileName  	string
+//	WorkerIdx 	int 		// Map函数或者reduce函数的序号
+//	NReduce   	int 		// reduce worker的数量
+//	NMap      	int
+//	TimeStamp  	time.Time 	// 表示时间戳
+//}

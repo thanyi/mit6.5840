@@ -1,13 +1,18 @@
 package kvsrv
 
-import "6.5840/labrpc"
+import (
+	"6.5840/labrpc"
+	"time"
+)
 import "crypto/rand"
 import "math/big"
 
+type RequestTpye int
 
 type Clerk struct {
 	server *labrpc.ClientEnd
 	// You will have to modify this struct.
+	requestId int64
 }
 
 func nrand() int64 {
@@ -20,7 +25,7 @@ func nrand() int64 {
 func MakeClerk(server *labrpc.ClientEnd) *Clerk {
 	ck := new(Clerk)
 	ck.server = server
-	// You'll have to add code here.
+	ck.requestId = nrand()
 	return ck
 }
 
@@ -35,9 +40,19 @@ func MakeClerk(server *labrpc.ClientEnd) *Clerk {
 // must match the declared types of the RPC handler function's
 // arguments. and reply must be passed as a pointer.
 func (ck *Clerk) Get(key string) string {
-
-	// You will have to modify this function.
-	return ""
+	var args = GetArgs{
+		Key: key,
+	}
+	var reply = GetReply{}
+	for {
+		ok := ck.server.Call("KVServer.Get", &args, &reply)
+		if ok {
+			break
+		} else {
+			DPrintf("[Client] Call ***(%v) failed, retrying...", args)
+		}
+	}
+	return reply.Value
 }
 
 // shared by Put and Append.
@@ -50,7 +65,25 @@ func (ck *Clerk) Get(key string) string {
 // arguments. and reply must be passed as a pointer.
 func (ck *Clerk) PutAppend(key string, value string, op string) string {
 	// You will have to modify this function.
-	return ""
+	args := PutAppendArgs{
+		Key:       key,
+		Value:     value,
+		RequestID: ck.requestId, // 一次client只调用一次Clerk
+	}
+	reply := PutAppendReply{}
+	// 一直循环请求
+	for {
+		ok := ck.server.Call("KVServer."+op, &args, &reply)
+		if ok {
+			ck.requestId++
+			return reply.Value
+		} else {
+			DPrintf("[Client] Call ***(%v) failed, retrying...", args)
+			time.Sleep(100 * time.Millisecond) // 添加100毫秒的休眠时间
+		}
+
+	}
+
 }
 
 func (ck *Clerk) Put(key string, value string) {
